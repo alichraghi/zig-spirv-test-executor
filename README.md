@@ -39,7 +39,6 @@ Notes:
 
 The system dependencies above are available in nixpkgs as:
 
-- `spirv-tools` - headers and `libSPIRV-Tools-shared` for module validation.
 - `ocl-icd` - the OpenCL ICD loader (`libOpenCL`).
 - `opencl-headers` - the OpenCL headers.
 
