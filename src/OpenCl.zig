@@ -277,7 +277,6 @@ fn deviceSupportsSpirv(arena: std.mem.Allocator, device: cl.Device) !bool {
 
 const std = @import("std");
 const cl = @import("opencl");
-const spirv_tools = @import("spirv-tools");
 const SpirvModule = @import("SpirvModule.zig");
 const executor = @import("main.zig");
 const OpenCl = @This();

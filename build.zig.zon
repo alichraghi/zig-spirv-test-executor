@@ -20,10 +20,6 @@
             .url = "git+https://github.com/KhronosGroup/SPIRV-Headers#vulkan-sdk-1.4.363.0",
             .hash = "N-V-__8AAGbTPwCpO5RqFsSkao-YQrp4sYtjDvquqfjmh9pW",
         },
-        .spirv_tools = .{
-            .url = "git+https://github.com/KhronosGroup/SPIRV-Tools#vulkan-sdk-1.4.363.0",
-            .hash = "N-V-__8AAJchlwH1qcBdsMbVmaIHJzBaNoJi0UqKXq1Ah8A3",
-        },
     },
     .paths = .{""},
 }

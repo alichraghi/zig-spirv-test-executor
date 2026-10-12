@@ -58,7 +58,6 @@ pub fn load(io: std.Io, arena: std.mem.Allocator, file: std.Io.File) !SpirvModul
         .entry_points = try arena.dupe(EntryPoint, entries.items),
         .error_names = try arena.dupe([]const u8, names.items),
     };
-    try module.validate(io, arena);
     return module;
 }
 
@@ -109,93 +108,6 @@ const InstructionIterator = struct {
     }
 };
 
-fn validate(module: SpirvModule, io: std.Io, arena: std.mem.Allocator) !void {
-    const context = tools.spvContextCreate(switch (module.module_type) {
-        .shader => tools.SPV_ENV_VULKAN_1_3,
-        .kernel => tools.SPV_ENV_OPENCL_2_2,
-    }) orelse return error.OutOfMemory;
-    defer tools.spvContextDestroy(context);
-
-    var diagnostic: tools.spv_diagnostic = null;
-    defer tools.spvDiagnosticDestroy(diagnostic);
-
-    if (tools.spvValidateBinary(
-        context,
-        module.words.ptr,
-        module.words.len,
-        &diagnostic,
-    ) == tools.SPV_SUCCESS) {
-        return;
-    }
-
-    _ = tools.spvDiagnosticPrint(diagnostic);
-
-    var location: Location = .{};
-    var instructions: InstructionIterator = .{ .words = module.words };
-    while (try instructions.next()) |inst| {
-        if (inst.index >= diagnostic.*.position.index) break;
-        switch (inst.opcode) {
-            spirv.SpvOpFunction => location.function_id = inst.operands[1],
-            spirv.SpvOpFunctionEnd => {
-                location.function_id = 0;
-                location.file_id = 0;
-            },
-            spirv.SpvOpNoLine => location.file_id = 0,
-            spirv.SpvOpLine => {
-                location.file_id = inst.operands[0];
-                location.line = inst.operands[1];
-                location.column = inst.operands[2];
-            },
-            else => {},
-        }
-    }
-
-    instructions = .{ .words = module.words };
-    while (try instructions.next()) |inst| {
-        switch (inst.opcode) {
-            spirv.SpvOpName => if (inst.operands[0] == location.function_id) {
-                location.function = try inst.string(1);
-            },
-            spirv.SpvOpString => if (inst.operands[0] == location.file_id) {
-                location.file = try inst.string(1);
-            },
-            else => {},
-        }
-    }
-
-    if (location.file) |file| {
-        std.debug.print("at {s}:{}:{}\n", .{ file, location.line, location.column });
-        if (std.Io.Dir.cwd().readFileAlloc(io, file, arena, .unlimited)) |source| {
-            defer arena.free(source);
-            var it = std.mem.splitScalar(u8, source, '\n');
-            var index: usize = 1;
-            while (it.next()) |text| : (index += 1) {
-                if (index != location.line) continue;
-                const padding = try arena.alloc(u8, location.column -| 1);
-                defer arena.free(padding);
-                @memset(padding, ' ');
-                std.debug.print("{s}\n{s}^\n", .{ text, padding });
-                break;
-            }
-        } else |_| {}
-    }
-
-    if (location.function) |name| {
-        std.debug.print("in function %{d} ({s})\n", .{ location.function_id, name });
-    }
-
-    return error.InvalidSpirv;
-}
-
-const Location = struct {
-    function_id: u32 = 0,
-    file_id: u32 = 0,
-    line: u32 = 0,
-    column: u32 = 0,
-    function: ?[]const u8 = null,
-    file: ?[]const u8 = null,
-};
-
 pub fn errorName(module: SpirvModule, error_code: u32) ?[]const u8 {
     return if (error_code < module.error_names.len)
         module.error_names[error_code]
@@ -205,5 +117,4 @@ pub fn errorName(module: SpirvModule, error_code: u32) ?[]const u8 {
 
 const std = @import("std");
 const spirv = @import("spirv");
-const tools = @import("spirv-tools");
 const SpirvModule = @This();
