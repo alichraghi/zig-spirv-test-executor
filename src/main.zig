@@ -33,13 +33,14 @@ pub fn main(init: std.process.Init) !u8 {
                 switch (tag) {
                     .input_file => {
                         if (file != null) return error.InvalidProtocolMessage;
-                        file = .{
-                            .handle = std.mem.bytesToValue(
+                        file = try init.io.vtable.inheritParentFile(
+                            init.io.userdata,
+                            std.mem.bytesToValue(
                                 std.Io.File.Handle,
                                 try body.take(@sizeOf(std.Io.File.Handle)),
                             ),
-                            .flags = .{ .nonblocking = false },
-                        };
+                            .{ .nonblocking = false },
+                        );
                     },
                     .string => {
                         const arg = try body.takeSentinel(0);

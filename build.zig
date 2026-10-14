@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) void {
     const spirv = b.addTranslateC(.{
         .root_source_file = spirv_headers.path("include/spirv/unified1/spirv.h"),
         .target = target,
-        .optimize = optimize,
+        .optimize = optimize orelse .safe,
     }).createModule();
 
     const exe = b.addExecutable(.{
